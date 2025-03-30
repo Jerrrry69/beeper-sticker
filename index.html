@@ -1,198 +1,47 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Beeper 贴纸编辑器</title>
-    <style>
-        #uploadArea {
-            border: 2px dashed #ccc;
-            padding: 20px;
-            text-align: center;
-        }
-        #imageContainer {
-            position: relative;
-            display: none;
-            max-width: 100%;
-        }
-        #uploadedImage {
-            width: 100%;
-            display: none;
-        }
-        #beeperSticker {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 100px;
-            cursor: grab;
-            display: none;
-            transform-origin: center;
-        }
-        .editor-area {
-            display: none;
-        }
-    </style>
+    <title>Beeper's Sticker</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="uploadArea">
-        <input type="file" id="imageUpload" accept="image/*">
+    <div class="container">
+        <h1>Beeper's Sticker</h1>
+        
+        <div class="upload-area" id="uploadArea">
+            <input type="file" id="imageUpload" accept="image/*" style="display: none;">
+            <label for="imageUpload" class="upload-button">
+                <img src="assets/upload-icon.png" alt="Upload" class="upload-icon">
+                <span>Upload Photo</span>
+            </label>
+        </div>
+        
+        <div class="editor-area">
+            <div class="image-container" id="imageContainer">
+                <img id="uploadedImage" style="display: none;">
+                <img id="beeperSticker" src="assets/beeper-sticker.png" style="display: none;">
+            </div>
+            
+            <div class="controls">
+                <div class="control-group">
+                    <label for="rotationControl">Rotation:</label>
+                    <input type="range" id="rotationControl" min="0" max="360" value="0">
+                    <span id="rotationValue">0°</span>
+                </div>
+                
+                <div class="control-group">
+                    <label for="sizeControl">Size:</label>
+                    <input type="range" id="sizeControl" min="20" max="200" value="100">
+                    <span id="sizeValue">100%</span>
+                </div>
+                
+                <button id="downloadBtn">Download Image</button>
+            </div>
+        </div>
     </div>
-
-    <div id="imageContainer">
-        <img id="uploadedImage" alt="Uploaded Image">
-        <img id="beeperSticker" src="https://via.placeholder.com/100" alt="Beeper Sticker">
-    </div>
-
-    <div class="editor-area">
-        <label>旋转: <span id="rotationValue">0°</span></label>
-        <input type="range" id="rotationControl" min="-180" max="180" value="0">
-
-        <label>大小: <span id="sizeValue">100%</span></label>
-        <input type="range" id="sizeControl" min="50" max="200" value="100">
-
-        <button id="downloadBtn">下载图片</button>
-    </div>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const imageUpload = document.getElementById('imageUpload');
-            const imageContainer = document.getElementById('imageContainer');
-            const uploadedImage = document.getElementById('uploadedImage');
-            const beeperSticker = document.getElementById('beeperSticker');
-            const rotationControl = document.getElementById('rotationControl');
-            const sizeControl = document.getElementById('sizeControl');
-            const rotationValue = document.getElementById('rotationValue');
-            const sizeValue = document.getElementById('sizeValue');
-            const downloadBtn = document.getElementById('downloadBtn');
-            const editorArea = document.querySelector('.editor-area');
-
-            let isDragging = false;
-            let startX, startY, initialX = 0, initialY = 0;
-
-            rotationControl.value = 0;
-            sizeControl.value = 100;
-            rotationValue.textContent = '0°';
-            sizeValue.textContent = '100%';
-
-            imageUpload.addEventListener('change', function(e) {
-                const file = e.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = function(event) {
-                        uploadedImage.src = event.target.result;
-                        uploadedImage.style.display = 'block';
-                        beeperSticker.style.display = 'block';
-                        imageContainer.style.display = 'block';
-                        editorArea.style.display = 'block';
-
-                        beeperSticker.dataset.x = 0;
-                        beeperSticker.dataset.y = 0;
-                        beeperSticker.style.width = '100px';
-                        updatePosition();
-
-                        rotationControl.value = 0;
-                        sizeControl.value = 100;
-                        rotationValue.textContent = '0°';
-                        sizeValue.textContent = '100%';
-                    };
-                    reader.readAsDataURL(file);
-                }
-            });
-
-            rotationControl.addEventListener('input', function() {
-                rotationValue.textContent = `${this.value}°`;
-                updatePosition();
-            });
-
-            sizeControl.addEventListener('input', function() {
-                sizeValue.textContent = `${this.value}%`;
-                beeperSticker.style.width = `${this.value}px`;
-                updatePosition();
-            });
-
-            function startDrag(e) {
-                isDragging = true;
-                startX = e.clientX || e.touches[0].clientX;
-                startY = e.clientY || e.touches[0].clientY;
-                initialX = parseFloat(beeperSticker.dataset.x) || 0;
-                initialY = parseFloat(beeperSticker.dataset.y) || 0;
-                beeperSticker.style.cursor = 'grabbing';
-                e.preventDefault();
-            }
-
-            function doDrag(e) {
-                if (!isDragging) return;
-
-                const clientX = e.clientX || e.touches[0].clientX;
-                const clientY = e.clientY || e.touches[0].clientY;
-
-                const x = initialX + (clientX - startX);
-                const y = initialY + (clientY - startY);
-
-                beeperSticker.dataset.x = x;
-                beeperSticker.dataset.y = y;
-                updatePosition();
-            }
-
-            function stopDrag() {
-                isDragging = false;
-                beeperSticker.style.cursor = 'grab';
-            }
-
-            function updatePosition() {
-                const x = parseFloat(beeperSticker.dataset.x) || 0;
-                const y = parseFloat(beeperSticker.dataset.y) || 0;
-                const rotation = parseFloat(rotationControl.value) || 0;
-                beeperSticker.style.transform = `translate(${x}px, ${y}px) rotate(${rotation}deg)`;
-            }
-
-            beeperSticker.addEventListener('pointerdown', startDrag);
-            document.addEventListener('pointermove', doDrag);
-            document.addEventListener('pointerup', stopDrag);
-
-            downloadBtn.addEventListener('click', function() {
-                if (!uploadedImage.src) {
-                    alert('请先上传图片');
-                    return;
-                }
-
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-
-                canvas.width = uploadedImage.naturalWidth;
-                canvas.height = uploadedImage.naturalHeight;
-
-                ctx.drawImage(uploadedImage, 0, 0, canvas.width, canvas.height);
-
-                const containerRect = imageContainer.getBoundingClientRect();
-                const stickerRect = beeperSticker.getBoundingClientRect();
-                const scaleX = canvas.width / containerRect.width;
-                const scaleY = canvas.height / containerRect.height;
-
-                const stickerWidth = stickerRect.width * scaleX;
-                const stickerHeight = stickerRect.height * scaleX; // 仅按 scaleX 计算，保持比例
-
-                const x = (stickerRect.left - containerRect.left) * scaleX;
-                const y = (stickerRect.top - containerRect.top) * scaleY;
-
-                ctx.save();
-                ctx.translate(x + stickerWidth / 2, y + stickerHeight / 2);
-                ctx.rotate(parseFloat(rotationControl.value) * Math.PI / 180);
-
-                ctx.drawImage(beeperSticker, -stickerWidth / 2, -stickerHeight / 2, stickerWidth, stickerHeight);
-                ctx.restore();
-
-                setTimeout(() => {
-                    const dataURL = canvas.toDataURL('image/png');
-                    const link = document.createElement('a');
-                    link.download = 'beeper-sticker-image.png';
-                    link.href = dataURL;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                }, 100);
-            });
-        });
-    </script>
+    
+    <script src="script.js"></script>
 </body>
 </html>
