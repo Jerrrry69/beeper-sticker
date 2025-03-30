@@ -1,41 +1,57 @@
 document.addEventListener('DOMContentLoaded', function() {
+    // 获取所有DOM元素
     const imageUpload = document.getElementById('imageUpload');
-    const uploadArea = document.getElementById('uploadArea');
-    const imageContainer = document.getElementById('imageContainer');
     const uploadedImage = document.getElementById('uploadedImage');
     const beeperSticker = document.getElementById('beeperSticker');
+    const imageContainer = document.getElementById('imageContainer');
     const rotationControl = document.getElementById('rotationControl');
     const sizeControl = document.getElementById('sizeControl');
-    const rotationValue = document.getElementById('rotationValue');
-    const sizeValue = document.getElementById('sizeValue');
     const downloadBtn = document.getElementById('downloadBtn');
 
+    // 状态变量
     let isDragging = false;
-    let offsetX, offsetY;
+    let startX, startY, initialX = 0, initialY = 0;
+    let scaleFactor = 1; // 新增：图片缩放比例
 
-    rotationControl.min = 0;
-    rotationControl.max = 360;
-    rotationControl.value = 0;
-    rotationValue.textContent = '0°';
+    // 初始化贴纸尺寸
+    beeperSticker.style.width = "50px"; // 初始尺寸调整为50px
+    sizeControl.value = 50; // 同步调整滑块初始值
+    document.getElementById('sizeValue').textContent = '50%';
 
+    // 图片上传逻辑
     imageUpload.addEventListener('change', function(e) {
         const file = e.target.files[0];
         if (file) {
             const reader = new FileReader();
             reader.onload = function(event) {
                 uploadedImage.onload = function() {
+                    // 计算图片显示尺寸
                     const containerWidth = imageContainer.offsetWidth;
                     const containerHeight = imageContainer.offsetHeight;
-                    const ratio = Math.min(
-                        containerWidth / this.naturalWidth,
-                        containerHeight / this.naturalHeight
-                    );
+                    const imgRatio = this.naturalWidth / this.naturalHeight;
+                    const containerRatio = containerWidth / containerHeight;
 
-                    uploadedImage.style.width = `${this.naturalWidth * ratio}px`;
-                    uploadedImage.style.height = `${this.naturalHeight * ratio}px`;
+                    // 计算实际显示尺寸
+                    let displayWidth, displayHeight;
+                    if (imgRatio > containerRatio) {
+                        displayWidth = containerWidth;
+                        displayHeight = containerWidth / imgRatio;
+                    } else {
+                        displayHeight = containerHeight;
+                        displayWidth = containerHeight * imgRatio;
+                    }
 
-                    beeperSticker.style.display = 'block';
+                    // 设置图片显示尺寸
+                    uploadedImage.style.width = `${displayWidth}px`;
+                    uploadedImage.style.height = `${displayHeight}px`;
+                    uploadedImage.style.display = 'block';
+
+                    // 计算缩放比例
+                    scaleFactor = this.naturalWidth / displayWidth;
+
+                    // 显示编辑器
                     document.querySelector('.editor-area').style.display = 'block';
+                    beeperSticker.style.display = 'block';
                     resetStickerPosition();
                 };
                 uploadedImage.src = event.target.result;
@@ -44,22 +60,15 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    rotationControl.addEventListener('input', function() {
-        updatePosition();
-        rotationValue.textContent = `${this.value}°`;
-    });
-
-    sizeControl.addEventListener('input', function() {
-        beeperSticker.style.width = `${this.value}px`;
-        sizeValue.textContent = `${this.value}%`;
-    });
-
-    let startX, startY, initialX = 0, initialY = 0;
+    // 贴纸拖拽逻辑
+    beeperSticker.addEventListener('pointerdown', startDrag);
+    document.addEventListener('pointermove', doDrag);
+    document.addEventListener('pointerup', stopDrag);
 
     function startDrag(e) {
         isDragging = true;
-        startX = e.clientX || e.touches[0].clientX;
-        startY = e.clientY || e.touches[0].clientY;
+        startX = e.clientX;
+        startY = e.clientY;
         initialX = parseFloat(beeperSticker.dataset.x) || 0;
         initialY = parseFloat(beeperSticker.dataset.y) || 0;
         e.preventDefault();
@@ -67,10 +76,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function doDrag(e) {
         if (!isDragging) return;
-        const clientX = e.clientX || e.touches[0].clientX;
-        const clientY = e.clientY || e.touches[0].clientY;
-        beeperSticker.dataset.x = initialX + (clientX - startX);
-        beeperSticker.dataset.y = initialY + (clientY - startY);
+        const deltaX = e.clientX - startX;
+        const deltaY = e.clientY - startY;
+        beeperSticker.dataset.x = initialX + deltaX;
+        beeperSticker.dataset.y = initialY + deltaY;
         updatePosition();
     }
 
@@ -78,82 +87,85 @@ document.addEventListener('DOMContentLoaded', function() {
         isDragging = false;
     }
 
+    // 控制逻辑
+    rotationControl.addEventListener('input', function() {
+        document.getElementById('rotationValue').textContent = `${this.value}°`;
+        updatePosition();
+    });
+
+    sizeControl.addEventListener('input', function() {
+        beeperSticker.style.width = `${this.value}px`;
+        document.getElementById('sizeValue').textContent = `${this.value}%`;
+    });
+
     function updatePosition() {
-        const rotation = rotationControl.value;
         const x = parseFloat(beeperSticker.dataset.x) || 0;
         const y = parseFloat(beeperSticker.dataset.y) || 0;
-        beeperSticker.style.transform = `translate(${x}px, ${y}px) rotate(${rotation}deg)`;
+        beeperSticker.style.transform = `
+            translate(${x}px, ${y}px)
+            rotate(${rotationControl.value}deg)
+        `;
     }
 
-    beeperSticker.addEventListener('pointerdown', startDrag);
-    document.addEventListener('pointermove', doDrag);
-    document.addEventListener('pointerup', stopDrag);
-
-    function getScalingFactors() {
-        const displayedWidth = uploadedImage.offsetWidth;
-        const displayedHeight = uploadedImage.offsetHeight;
-        return {
-            scaleX: uploadedImage.naturalWidth / displayedWidth,
-            scaleY: uploadedImage.naturalHeight / displayedHeight
-        };
-    }
-
+    // 下载功能（核心修复）
     downloadBtn.addEventListener('click', function() {
-        if (!uploadedImage.src) {
-            alert('请先上传图片');
+        if (!uploadedImage.complete) {
+            alert('请等待图片加载完成');
             return;
         }
 
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
+        
+        // 设置画布为原始图片尺寸
         canvas.width = uploadedImage.naturalWidth;
         canvas.height = uploadedImage.naturalHeight;
 
-        ctx.drawImage(uploadedImage, 0, 0, canvas.width, canvas.height);
+        // 绘制背景图片
+        ctx.drawImage(uploadedImage, 0, 0);
 
-        const scale = getScalingFactors();
-
+        // 获取贴纸实际位置
         const stickerRect = beeperSticker.getBoundingClientRect();
         const containerRect = imageContainer.getBoundingClientRect();
 
+        // 计算相对位置（考虑滚动偏移）
         const x = stickerRect.left - containerRect.left;
         const y = stickerRect.top - containerRect.top;
 
-        const scaledX = x * scale.scaleX;
-        const scaledY = y * scale.scaleY;
-        const scaledWidth = stickerRect.width * scale.scaleX;
-        const scaledHeight = stickerRect.height * scale.scaleY;
+        // 转换为原始图片坐标
+        const originX = x * scaleFactor;
+        const originY = y * scaleFactor;
+        const originWidth = stickerRect.width * scaleFactor;
+        const originHeight = stickerRect.height * scaleFactor;
 
+        // 绘制贴纸
         ctx.save();
-        ctx.translate(scaledX + scaledWidth/2, scaledY + scaledHeight/2);
-        ctx.rotate(parseInt(rotationControl.value) * Math.PI / 180);
+        ctx.translate(
+            originX + originWidth/2, 
+            originY + originHeight/2
+        );
+        ctx.rotate(rotationControl.value * Math.PI / 180);
         ctx.drawImage(
             beeperSticker,
-            -scaledWidth/2,
-            -scaledHeight/2,
-            scaledWidth,
-            scaledHeight
+            -originWidth/2,
+            -originHeight/2,
+            originWidth,
+            originHeight
         );
         ctx.restore();
 
-        setTimeout(() => {
-            const dataURL = canvas.toDataURL('image/png');
-            const link = document.createElement('a');
-            link.download = 'beeper-sticker-image.png';
-            link.href = dataURL;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }, 100);
+        // 触发下载
+        const link = document.createElement('a');
+        link.download = 'edited-image.png';
+        link.href = canvas.toDataURL();
+        link.click();
     });
 
     function resetStickerPosition() {
-        beeperSticker.style.transform = 'translate(0px, 0px) rotate(0deg)';
         beeperSticker.dataset.x = 0;
         beeperSticker.dataset.y = 0;
         rotationControl.value = 0;
-        sizeControl.value = 100;
-        rotationValue.textContent = '0°';
-        sizeValue.textContent = '100%';
+        sizeControl.value = 50;
+        updatePosition();
     }
 });
