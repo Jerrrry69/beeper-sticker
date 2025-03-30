@@ -110,64 +110,52 @@ document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('pointerup', stopDrag);
     
     downloadBtn.addEventListener('click', function() {
-        if (!uploadedImage.src || uploadedImage.src === '') {
+        if (!uploadedImage.src) {
             alert('请先上传图片');
             return;
         }
-
-        // Create canvas
+    
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
-        
-        // Load background image
         const bgImg = new Image();
         bgImg.crossOrigin = 'Anonymous';
+    
         bgImg.onload = function() {
-            // Set canvas dimensions to match original image
             canvas.width = bgImg.naturalWidth;
             canvas.height = bgImg.naturalHeight;
-            
-            // Draw background image
-            ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
-            
-            // Calculate scaling factors
+            ctx.drawImage(bgImg, 0, 0);
+    
+            // 计算图片显示的缩放比例
             const displayedWidth = uploadedImage.clientWidth;
             const displayedHeight = uploadedImage.clientHeight;
             const scaleX = bgImg.naturalWidth / displayedWidth;
             const scaleY = bgImg.naturalHeight / displayedHeight;
-            
-            // Load sticker image
+    
             const stickerImg = new Image();
             stickerImg.crossOrigin = 'Anonymous';
             stickerImg.onload = function() {
-                // Get sticker display size
+                // 获取贴纸实际显示尺寸
                 const stickerDisplayWidth = parseInt(beeperSticker.style.width);
                 const stickerDisplayHeight = stickerImg.naturalHeight * (stickerDisplayWidth / stickerImg.naturalWidth);
-                
-                // Get sticker position (accounting for scaling)
-                const transform = window.getComputedStyle(beeperSticker).transform;
-                const matrix = new DOMMatrix(transform);
-                const x = matrix.m41 * scaleX;
-                const y = matrix.m42 * scaleY;
-                
-                // Calculate scaled sticker dimensions
+    
+                // 计算贴纸在 Canvas 中的位置（基于 getBoundingClientRect）
+                const stickerRect = beeperSticker.getBoundingClientRect();
+                const imageRect = uploadedImage.getBoundingClientRect();
+                const x = (stickerRect.left - imageRect.left) * scaleX;
+                const y = (stickerRect.top - imageRect.top) * scaleY;
+    
+                // 计算缩放后的贴纸尺寸
                 const scaledWidth = stickerDisplayWidth * scaleX;
                 const scaledHeight = stickerDisplayHeight * scaleY;
-                
-                // Draw sticker with rotation
+    
+                // 绘制贴纸（含旋转）
                 ctx.save();
-                ctx.translate(x + scaledWidth/2, y + scaledHeight/2);
-                ctx.rotate(rotationControl.value * Math.PI / 180);
-                ctx.drawImage(
-                    stickerImg, 
-                    -scaledWidth/2, 
-                    -scaledHeight/2, 
-                    scaledWidth, 
-                    scaledHeight
-                );
+                ctx.translate(x + scaledWidth / 2, y + scaledHeight / 2);
+                ctx.rotate((rotationControl.value * Math.PI) / 180);
+                ctx.drawImage(stickerImg, -scaledWidth / 2, -scaledHeight / 2, scaledWidth, scaledHeight);
                 ctx.restore();
-                
-                // Download image
+    
+                // 触发下载
                 canvas.toBlob(function(blob) {
                     const url = URL.createObjectURL(blob);
                     const link = document.createElement('a');
@@ -181,4 +169,5 @@ document.addEventListener('DOMContentLoaded', function() {
         };
         bgImg.src = uploadedImage.src;
     });
+    
 });
