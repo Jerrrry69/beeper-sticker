@@ -11,6 +11,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const downloadBtn = document.getElementById('downloadBtn');
     const editorArea = document.querySelector('.editor-area');
 
+    let isDragging = false;
+
     // 初始化设置
     rotationControl.min = -180;
     rotationControl.max = 180;
@@ -32,7 +34,11 @@ document.addEventListener('DOMContentLoaded', function() {
             reader.onload = function(event) {
                 uploadedImage.src = event.target.result;
                 uploadedImage.onload = function() {
+                    // Make sure the image is visible
                     uploadedImage.style.display = 'block';
+                    uploadedImage.style.maxWidth = '100%';
+                    uploadedImage.style.maxHeight = '100%';
+                    
                     beeperSticker.style.display = 'block';
                     editorArea.style.display = 'block';
                     
@@ -47,7 +53,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // 其他事件监听器和函数保持不变...
     rotationControl.addEventListener('input', function() {
         updatePosition();
         rotationValue.textContent = `${this.value}°`;
@@ -95,7 +100,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('pointerup', stopDrag);
     
     downloadBtn.addEventListener('click', function() {
-        if (!uploadedImage.src) {
+        if (!uploadedImage.src || uploadedImage.src === '') {
             alert('请先上传图片');
             return;
         }
@@ -108,31 +113,42 @@ document.addEventListener('DOMContentLoaded', function() {
         const bgImg = new Image();
         bgImg.crossOrigin = 'Anonymous';
         bgImg.onload = function() {
-            canvas.width = bgImg.width;
-            canvas.height = bgImg.height;
+            // Set canvas dimensions to match the original image dimensions
+            canvas.width = bgImg.naturalWidth;
+            canvas.height = bgImg.naturalHeight;
+            
+            // Calculate scaling factors
+            const scaleX = bgImg.naturalWidth / uploadedImage.width;
+            const scaleY = bgImg.naturalHeight / uploadedImage.height;
             
             // 绘制背景图片
-            ctx.drawImage(bgImg, 0, 0);
+            ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
             
             // 加载贴纸图片
             const stickerImg = new Image();
             stickerImg.crossOrigin = 'Anonymous';
             stickerImg.onload = function() {
                 // 计算贴纸尺寸
-                const displayWidth = parseInt(beeperSticker.style.width);
-                const displayHeight = stickerImg.height * (displayWidth / stickerImg.width);
+                const displayWidth = parseInt(beeperSticker.style.width) * scaleX;
+                const displayHeight = stickerImg.naturalHeight * (displayWidth / stickerImg.naturalWidth);
                 
                 // 获取贴纸位置
                 const transform = window.getComputedStyle(beeperSticker).transform;
                 const matrix = new DOMMatrix(transform);
-                const x = matrix.m41;
-                const y = matrix.m42;
+                const x = matrix.m41 * scaleX;
+                const y = matrix.m42 * scaleY;
                 
                 // 绘制贴纸
                 ctx.save();
                 ctx.translate(x + displayWidth/2, y + displayHeight/2);
                 ctx.rotate(parseInt(rotationControl.value) * Math.PI / 180);
-                ctx.drawImage(stickerImg, -displayWidth/2, -displayHeight/2, displayWidth, displayHeight);
+                ctx.drawImage(
+                    stickerImg, 
+                    -displayWidth/2, 
+                    -displayHeight/2, 
+                    displayWidth, 
+                    displayHeight
+                );
                 ctx.restore();
                 
                 // 下载图片
