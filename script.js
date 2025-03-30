@@ -130,17 +130,20 @@ document.addEventListener('DOMContentLoaded', function() {
         const scaleX = canvas.width / containerRect.width;
         const scaleY = canvas.height / containerRect.height;
         
+        // 获取贴纸当前变换矩阵
+        const transform = new DOMMatrix(beeperSticker.style.transform);
+        
         // 计算贴纸在canvas中的尺寸
         const stickerWidth = beeperSticker.offsetWidth * scaleX;
         const stickerHeight = beeperSticker.offsetHeight * scaleY;
         
-        // 计算贴纸中心点位置(考虑transform的translate)
-        const stickerCenterX = (parseFloat(beeperSticker.dataset.x) || 0) * scaleX + canvas.width / 2;
-        const stickerCenterY = (parseFloat(beeperSticker.dataset.y) || 0) * scaleY + canvas.height / 2;
+        // 计算贴纸中心点在canvas中的位置
+        const stickerCenterX = (beeperSticker.offsetLeft + beeperSticker.offsetWidth/2) * scaleX;
+        const stickerCenterY = (beeperSticker.offsetTop + beeperSticker.offsetHeight/2) * scaleY;
 
         ctx.save();
         ctx.translate(stickerCenterX, stickerCenterY);
-        ctx.rotate(parseInt(rotationControl.value) * Math.PI / 180);
+        ctx.rotate(transform.rotate * Math.PI / 180);
         
         ctx.drawImage(
             beeperSticker,
