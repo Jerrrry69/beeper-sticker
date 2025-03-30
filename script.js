@@ -10,9 +10,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const sizeValue = document.getElementById('sizeValue');
     const downloadBtn = document.getElementById('downloadBtn');
     const editorArea = document.querySelector('.editor-area');
-    
-    let isDragging = false;
-    let offsetX, offsetY;
 
     // 初始化设置
     rotationControl.min = -180;
@@ -20,10 +17,13 @@ document.addEventListener('DOMContentLoaded', function() {
     rotationControl.value = 0;
     rotationValue.textContent = '0°';
     
-    // 设置贴纸初始大小
+    // 设置贴纸初始大小和位置
     beeperSticker.style.width = '80px';
+    beeperSticker.dataset.x = 0;
+    beeperSticker.dataset.y = 0;
     sizeControl.value = 80;
     sizeValue.textContent = '80%';
+    updatePosition();
 
     imageUpload.addEventListener('change', function(e) {
         const file = e.target.files[0];
@@ -36,16 +36,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     beeperSticker.style.display = 'block';
                     editorArea.style.display = 'block';
                     
-                    // 重置贴纸位置
-                    beeperSticker.style.transform = 'translate(0px, 0px) rotate(0deg)';
+                    // 重置贴纸位置和旋转
+                    beeperSticker.dataset.x = 0;
+                    beeperSticker.dataset.y = 0;
                     rotationControl.value = 0;
-                    rotationValue.textContent = '0°';
+                    updatePosition();
                 };
             };
             reader.readAsDataURL(file);
         }
     });
-    
+
+    // 其他事件监听器和函数保持不变...
     rotationControl.addEventListener('input', function() {
         updatePosition();
         rotationValue.textContent = `${this.value}°`;
@@ -98,33 +100,39 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
+        // 创建canvas元素
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         
-        // 等待图片加载完成
-        const img = new Image();
-        img.onload = function() {
-            canvas.width = img.naturalWidth;
-            canvas.height = img.naturalHeight;
+        // 加载背景图片
+        const bgImg = new Image();
+        bgImg.crossOrigin = 'Anonymous';
+        bgImg.onload = function() {
+            canvas.width = bgImg.width;
+            canvas.height = bgImg.height;
             
             // 绘制背景图片
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            ctx.drawImage(bgImg, 0, 0);
             
-            // 绘制贴纸
-            const sticker = new Image();
-            sticker.onload = function() {
-                const stickerWidth = parseInt(beeperSticker.style.width);
-                const stickerHeight = sticker.naturalHeight * (stickerWidth / sticker.naturalWidth);
+            // 加载贴纸图片
+            const stickerImg = new Image();
+            stickerImg.crossOrigin = 'Anonymous';
+            stickerImg.onload = function() {
+                // 计算贴纸尺寸
+                const displayWidth = parseInt(beeperSticker.style.width);
+                const displayHeight = stickerImg.height * (displayWidth / stickerImg.width);
                 
+                // 获取贴纸位置
                 const transform = window.getComputedStyle(beeperSticker).transform;
                 const matrix = new DOMMatrix(transform);
                 const x = matrix.m41;
                 const y = matrix.m42;
                 
+                // 绘制贴纸
                 ctx.save();
-                ctx.translate(x + stickerWidth/2, y + stickerHeight/2);
+                ctx.translate(x + displayWidth/2, y + displayHeight/2);
                 ctx.rotate(parseInt(rotationControl.value) * Math.PI / 180);
-                ctx.drawImage(sticker, -stickerWidth/2, -stickerHeight/2, stickerWidth, stickerHeight);
+                ctx.drawImage(stickerImg, -displayWidth/2, -displayHeight/2, displayWidth, displayHeight);
                 ctx.restore();
                 
                 // 下载图片
@@ -132,12 +140,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 const link = document.createElement('a');
                 link.download = 'beeper-sticker-image.png';
                 link.href = dataURL;
-                document.body.appendChild(link);
                 link.click();
-                document.body.removeChild(link);
             };
-            sticker.src = beeperSticker.src;
+            stickerImg.src = beeperSticker.src;
         };
-        img.src = uploadedImage.src;
+        bgImg.src = uploadedImage.src;
     });
 });
