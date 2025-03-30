@@ -9,7 +9,7 @@
 <body>
     <div class="container">
         <h1>Beeper's Sticker</h1>
-        
+
         <div class="upload-area" id="uploadArea">
             <input type="file" id="imageUpload" accept="image/*" style="display: none;">
             <label for="imageUpload" class="upload-button">
@@ -17,31 +17,31 @@
                 <span>Upload Photo</span>
             </label>
         </div>
-        
+
         <div class="editor-area">
             <div class="image-container" id="imageContainer">
                 <img id="uploadedImage" style="display: none;">
                 <img id="beeperSticker" src="assets/beeper-sticker.png" style="display: none;">
             </div>
-            
+
             <div class="controls">
                 <div class="control-group">
                     <label for="rotationControl">Rotation:</label>
                     <input type="range" id="rotationControl" min="0" max="360" value="0">
                     <span id="rotationValue">0°</span>
                 </div>
-                
+
                 <div class="control-group">
                     <label for="sizeControl">Size:</label>
                     <input type="range" id="sizeControl" min="20" max="200" value="100">
                     <span id="sizeValue">100%</span>
                 </div>
-                
+
                 <button id="downloadBtn">Download Image</button>
             </div>
         </div>
     </div>
-    
+
     <script src="script.js"></script>
 </body>
 </html>
