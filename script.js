@@ -32,10 +32,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 editorArea.style.display = 'block';
                 
                 // 重置贴纸位置和大小
-                beeperSticker.style.transform = 'translate(-50%, -50%) rotate(0deg)';
+                beeperSticker.dataset.x = 0;
+                beeperSticker.dataset.y = 0;
                 beeperSticker.style.width = '100px';
-                beeperSticker.style.left = '50%';
-                beeperSticker.style.top = '50%';
+                updatePosition();
                 
                 rotationControl.value = 0;
                 sizeControl.value = 100;
@@ -60,33 +60,59 @@ document.addEventListener('DOMContentLoaded', function() {
         sizeValue.textContent = `${size}%`;
     });
     
-    // 贴纸拖拽（按住即可拖动）
-    beeperSticker.addEventListener('pointerdown', function(e) {
-        isDragging = true;
-        offsetX = e.clientX - beeperSticker.getBoundingClientRect().left;
-        offsetY = e.clientY - beeperSticker.getBoundingClientRect().top;
-        beeperSticker.style.cursor = 'grabbing';
-    });
+    // 改进的贴纸拖拽功能
+    let startX, startY, initialX = 0, initialY = 0;
     
-    document.addEventListener('pointermove', function(e) {
+    function startDrag(e) {
+        isDragging = true;
+        const rect = beeperSticker.getBoundingClientRect();
+        startX = e.clientX || e.touches[0].clientX;
+        startY = e.clientY || e.touches[0].clientY;
+        initialX = parseFloat(beeperSticker.dataset.x) || 0;
+        initialY = parseFloat(beeperSticker.dataset.y) || 0;
+        beeperSticker.style.cursor = 'grabbing';
+        e.preventDefault();
+    }
+    
+    function doDrag(e) {
         if (!isDragging) return;
         
-        const containerRect = imageContainer.getBoundingClientRect();
-        let x = e.clientX - containerRect.left - offsetX;
-        let y = e.clientY - containerRect.top - offsetY;
+        const clientX = e.clientX || e.touches[0].clientX;
+        const clientY = e.clientY || e.touches[0].clientY;
         
-        // 限制贴纸在容器内
-        x = Math.max(0, Math.min(x, containerRect.width - beeperSticker.offsetWidth));
-        y = Math.max(0, Math.min(y, containerRect.height - beeperSticker.offsetHeight));
+        const x = initialX + (clientX - startX);
+        const y = initialY + (clientY - startY);
         
-        beeperSticker.style.left = `${x}px`;
-        beeperSticker.style.top = `${y}px`;
-    });
+        beeperSticker.dataset.x = x;
+        beeperSticker.dataset.y = y;
+        updatePosition();
+    }
     
-    document.addEventListener('pointerup', function() {
+    function stopDrag() {
         isDragging = false;
         beeperSticker.style.cursor = 'grab';
-    });
+    }
+    
+    function updatePosition() {
+        const rotation = rotationControl.value;
+        const x = parseFloat(beeperSticker.dataset.x) || 0;
+        const y = parseFloat(beeperSticker.dataset.y) || 0;
+        
+        beeperSticker.style.transform = `translate(-50%, -50%) translate(${x}px, ${y}px) rotate(${rotation}deg)`;
+    }
+    
+    // 添加鼠标和触摸事件
+    beeperSticker.addEventListener('pointerdown', startDrag);
+    beeperSticker.addEventListener('touchstart', startDrag);
+    
+    document.addEventListener('pointermove', doDrag);
+    document.addEventListener('touchmove', doDrag);
+    
+    document.addEventListener('pointerup', stopDrag);
+    document.addEventListener('touchend', stopDrag);
+    
+    // 旋转时也更新位置
+    rotationControl.addEventListener('input', updatePosition);
     
     // 下载功能
     downloadBtn.addEventListener('click', function() {
