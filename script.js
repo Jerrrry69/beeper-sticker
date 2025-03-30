@@ -143,9 +143,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const scaleX = canvas.width / containerRect.width;
             const scaleY = canvas.height / containerRect.height;
             
-            // 计算贴纸在canvas中的尺寸
-            const stickerWidth = beeperSticker.naturalWidth * scaleX * (sizeControl.value / 100);
-            const stickerHeight = beeperSticker.naturalHeight * scaleY * (sizeControl.value / 100);
+            // 计算贴纸在canvas中的尺寸(基于网页显示尺寸)
+            const stickerWidth = beeperSticker.offsetWidth * scaleX;
+            const stickerHeight = beeperSticker.offsetHeight * scaleY;
             
             // 计算贴纸中心点(基于transform的translate值)
             const x = parseFloat(beeperSticker.dataset.x) || 0;
