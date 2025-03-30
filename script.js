@@ -121,53 +121,70 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
+        // 确保贴纸图片已加载
+        if (!beeperSticker.complete) {
+            alert('贴纸正在加载，请稍后再试');
+            return;
+        }
+
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         
+        // 设置canvas尺寸与上传图片一致
         canvas.width = uploadedImage.naturalWidth;
         canvas.height = uploadedImage.naturalHeight;
         
         try {
+            // 先绘制背景图片
             ctx.drawImage(uploadedImage, 0, 0, canvas.width, canvas.height);
+            
+            // 获取容器和贴纸的尺寸信息
+            const containerRect = imageContainer.getBoundingClientRect();
+            const scaleX = canvas.width / containerRect.width;
+            const scaleY = canvas.height / containerRect.height;
+            
+            // 计算贴纸在canvas中的尺寸
+            const stickerWidth = beeperSticker.naturalWidth * scaleX * (sizeControl.value / 100);
+            const stickerHeight = beeperSticker.naturalHeight * scaleY * (sizeControl.value / 100);
+            
+            // 计算贴纸中心点(基于transform的translate值)
+            const x = parseFloat(beeperSticker.dataset.x) || 0;
+            const y = parseFloat(beeperSticker.dataset.y) || 0;
+            const stickerCenterX = canvas.width/2 + x * scaleX;
+            const stickerCenterY = canvas.height/2 + y * scaleY;
+
+            // 绘制贴纸
+            ctx.save();
+            ctx.translate(stickerCenterX, stickerCenterY);
+            ctx.rotate(parseInt(rotationControl.value) * Math.PI / 180);
+            
+            ctx.drawImage(
+                beeperSticker,
+                -stickerWidth/2,
+                -stickerHeight/2,
+                stickerWidth,
+                stickerHeight
+            );
+            ctx.restore();
+            
+            // 创建下载链接
+            setTimeout(() => {
+                try {
+                    const dataURL = canvas.toDataURL('image/png');
+                    const link = document.createElement('a');
+                    link.download = 'beeper-sticker-image.png';
+                    link.href = dataURL;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                } catch (e) {
+                    console.error('生成下载链接失败:', e);
+                    alert('下载失败，请尝试使用其他图片');
+                }
+            }, 100);
         } catch (e) {
             console.error('绘制图片失败:', e);
-            alert('生成图片失败，请重试');
-            return;
+            alert('生成图片失败: ' + e.message);
         }
-        
-        const stickerRect = beeperSticker.getBoundingClientRect();
-        const containerRect = imageContainer.getBoundingClientRect();
-        
-        const scaleX = canvas.width / containerRect.width;
-        const scaleY = canvas.height / containerRect.height;
-        
-        // 计算贴纸在canvas中的尺寸和位置
-        const stickerWidth = beeperSticker.offsetWidth * scaleX;
-        const stickerHeight = beeperSticker.offsetHeight * scaleY;
-        
-        // 计算贴纸中心点(基于transform的translate值)
-        const x = parseFloat(beeperSticker.dataset.x) || 0;
-        const y = parseFloat(beeperSticker.dataset.y) || 0;
-        const stickerCenterX = canvas.width/2 + x * scaleX;
-        const stickerCenterY = canvas.height/2 + y * scaleY;
-
-        ctx.save();
-        ctx.translate(stickerCenterX, stickerCenterY);
-        ctx.rotate(parseInt(rotationControl.value) * Math.PI / 180);
-        
-        ctx.drawImage(
-            beeperSticker,
-            -stickerWidth/2,
-            -stickerHeight/2,
-            stickerWidth,
-            stickerHeight
-        );
-        
-        ctx.restore();
-        
-        const link = document.createElement('a');
-        link.download = 'beeper-sticker-image.png';
-        link.href = canvas.toDataURL('image/png');
-        link.click();
     });
 });
