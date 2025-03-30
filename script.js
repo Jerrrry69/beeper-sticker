@@ -26,6 +26,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 uploadedImage.src = event.target.result;
                 uploadedImage.style.display = 'block';
                 beeperSticker.style.display = 'block';
+                document.querySelector('.editor-area').style.display = 'block';
                 
                 beeperSticker.dataset.x = 0;
                 beeperSticker.dataset.y = 0;
