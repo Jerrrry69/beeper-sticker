@@ -13,18 +13,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
     let isDragging = false;
 
-    // Initialize settings
+    // Initialize settings with larger size range
     rotationControl.min = -180;
     rotationControl.max = 180;
     rotationControl.value = 0;
     rotationValue.textContent = '0°';
     
+    // Set sticker size range (10px to 500px)
+    sizeControl.min = 10;
+    sizeControl.max = 500;
+    sizeControl.value = 80;
+    sizeValue.textContent = '80px';
+    
     // Set initial sticker size and position
     beeperSticker.style.width = '80px';
     beeperSticker.dataset.x = 0;
     beeperSticker.dataset.y = 0;
-    sizeControl.value = 80;
-    sizeValue.textContent = '80%';
     updatePosition();
 
     imageUpload.addEventListener('change', function(e) {
@@ -40,10 +44,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     uploadedImage.style.maxWidth = '100%';
                     uploadedImage.style.maxHeight = '100%';
                     
-                    // Reset container dimensions
-                    imageContainer.style.width = '100%';
-                    imageContainer.style.height = 'auto';
+                    // Make sure container is properly sized
                     imageContainer.style.position = 'relative';
+                    imageContainer.style.overflow = 'visible';
                     
                     beeperSticker.style.display = 'block';
                     editorArea.style.display = 'block';
@@ -67,7 +70,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     sizeControl.addEventListener('input', function() {
         beeperSticker.style.width = `${this.value}px`;
-        sizeValue.textContent = `${this.value}%`;
+        sizeValue.textContent = `${this.value}px`;
         updatePosition();
     });
     
@@ -108,7 +111,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     downloadBtn.addEventListener('click', function() {
         if (!uploadedImage.src || uploadedImage.src === '') {
-            alert('Please upload an image first');
+            alert('请先上传图片');
             return;
         }
 
@@ -116,26 +119,28 @@ document.addEventListener('DOMContentLoaded', function() {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         
-        // Create temporary image to ensure proper dimensions
-        const tempImg = new Image();
-        tempImg.onload = function() {
-            // Set canvas to original image dimensions
-            canvas.width = tempImg.naturalWidth;
-            canvas.height = tempImg.naturalHeight;
+        // Load background image
+        const bgImg = new Image();
+        bgImg.crossOrigin = 'Anonymous';
+        bgImg.onload = function() {
+            // Set canvas dimensions to match original image
+            canvas.width = bgImg.naturalWidth;
+            canvas.height = bgImg.naturalHeight;
             
             // Draw background image
-            ctx.drawImage(tempImg, 0, 0);
+            ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
             
             // Calculate scaling factors
             const displayedWidth = uploadedImage.clientWidth;
             const displayedHeight = uploadedImage.clientHeight;
-            const scaleX = tempImg.naturalWidth / displayedWidth;
-            const scaleY = tempImg.naturalHeight / displayedHeight;
+            const scaleX = bgImg.naturalWidth / displayedWidth;
+            const scaleY = bgImg.naturalHeight / displayedHeight;
             
-            // Load sticker
+            // Load sticker image
             const stickerImg = new Image();
+            stickerImg.crossOrigin = 'Anonymous';
             stickerImg.onload = function() {
-                // Get sticker dimensions
+                // Get sticker display size
                 const stickerDisplayWidth = parseInt(beeperSticker.style.width);
                 const stickerDisplayHeight = stickerImg.naturalHeight * (stickerDisplayWidth / stickerImg.naturalWidth);
                 
@@ -146,31 +151,34 @@ document.addEventListener('DOMContentLoaded', function() {
                 const y = matrix.m42 * scaleY;
                 
                 // Calculate scaled sticker dimensions
-                const scaledStickerWidth = stickerDisplayWidth * scaleX;
-                const scaledStickerHeight = stickerDisplayHeight * scaleY;
+                const scaledWidth = stickerDisplayWidth * scaleX;
+                const scaledHeight = stickerDisplayHeight * scaleY;
                 
                 // Draw sticker with rotation
                 ctx.save();
-                ctx.translate(x + scaledStickerWidth/2, y + scaledStickerHeight/2);
-                ctx.rotate(parseInt(rotationControl.value) * Math.PI / 180);
+                ctx.translate(x + scaledWidth/2, y + scaledHeight/2);
+                ctx.rotate(rotationControl.value * Math.PI / 180);
                 ctx.drawImage(
                     stickerImg, 
-                    -scaledStickerWidth/2, 
-                    -scaledStickerHeight/2, 
-                    scaledStickerWidth, 
-                    scaledStickerHeight
+                    -scaledWidth/2, 
+                    -scaledHeight/2, 
+                    scaledWidth, 
+                    scaledHeight
                 );
                 ctx.restore();
                 
                 // Download image
-                const dataURL = canvas.toDataURL('image/png');
-                const link = document.createElement('a');
-                link.download = 'sticker-image.png';
-                link.href = dataURL;
-                link.click();
+                canvas.toBlob(function(blob) {
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.download = 'sticker-image.png';
+                    link.href = url;
+                    link.click();
+                    URL.revokeObjectURL(url);
+                }, 'image/png');
             };
             stickerImg.src = beeperSticker.src;
         };
-        tempImg.src = uploadedImage.src;
+        bgImg.src = uploadedImage.src;
     });
 });
