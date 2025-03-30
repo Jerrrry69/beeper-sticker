@@ -116,13 +116,24 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 下载功能
     downloadBtn.addEventListener('click', function() {
+        if (!uploadedImage.src) {
+            alert('请先上传图片');
+            return;
+        }
+
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         
         canvas.width = uploadedImage.naturalWidth;
         canvas.height = uploadedImage.naturalHeight;
         
-        ctx.drawImage(uploadedImage, 0, 0, canvas.width, canvas.height);
+        try {
+            ctx.drawImage(uploadedImage, 0, 0, canvas.width, canvas.height);
+        } catch (e) {
+            console.error('绘制图片失败:', e);
+            alert('生成图片失败，请重试');
+            return;
+        }
         
         const stickerRect = beeperSticker.getBoundingClientRect();
         const containerRect = imageContainer.getBoundingClientRect();
