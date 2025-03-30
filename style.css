@@ -35,8 +35,7 @@ h1 {
 }
 
 .upload-button {
-    display: inline-flex;
-    align-items: center;
+    display: inline-block;
     padding: 10px 20px;
     background-color: #3498db;
     color: white;
@@ -47,12 +46,6 @@ h1 {
 
 .upload-button:hover {
     background-color: #2980b9;
-}
-
-.upload-icon {
-    width: 24px;
-    height: 24px;
-    margin-right: 10px;
 }
 
 .editor-area {
@@ -79,8 +72,13 @@ h1 {
 
 #beeperSticker {
     position: absolute;
-    cursor: move;
+    cursor: grab;
     user-select: none;
+    transition: transform 0.2s ease;
+}
+
+#beeperSticker:active {
+    cursor: grabbing;
 }
 
 .controls {
