@@ -13,13 +13,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     let isDragging = false;
 
-    // 初始化设置
+    // Initialize settings
     rotationControl.min = -180;
     rotationControl.max = 180;
     rotationControl.value = 0;
     rotationValue.textContent = '0°';
     
-    // 设置贴纸初始大小和位置
+    // Set initial sticker size and position
     beeperSticker.style.width = '80px';
     beeperSticker.dataset.x = 0;
     beeperSticker.dataset.y = 0;
@@ -32,22 +32,29 @@ document.addEventListener('DOMContentLoaded', function() {
         if (file) {
             const reader = new FileReader();
             reader.onload = function(event) {
-                uploadedImage.src = event.target.result;
-                uploadedImage.onload = function() {
-                    // Make sure the image is visible
+                // Create new image to ensure proper loading
+                const img = new Image();
+                img.onload = function() {
+                    uploadedImage.src = event.target.result;
                     uploadedImage.style.display = 'block';
                     uploadedImage.style.maxWidth = '100%';
                     uploadedImage.style.maxHeight = '100%';
                     
+                    // Reset container dimensions
+                    imageContainer.style.width = '100%';
+                    imageContainer.style.height = 'auto';
+                    imageContainer.style.position = 'relative';
+                    
                     beeperSticker.style.display = 'block';
                     editorArea.style.display = 'block';
                     
-                    // 重置贴纸位置和旋转
+                    // Reset sticker position and rotation
                     beeperSticker.dataset.x = 0;
                     beeperSticker.dataset.y = 0;
                     rotationControl.value = 0;
                     updatePosition();
                 };
+                img.src = event.target.result;
             };
             reader.readAsDataURL(file);
         }
@@ -101,65 +108,69 @@ document.addEventListener('DOMContentLoaded', function() {
     
     downloadBtn.addEventListener('click', function() {
         if (!uploadedImage.src || uploadedImage.src === '') {
-            alert('请先上传图片');
+            alert('Please upload an image first');
             return;
         }
 
-        // 创建canvas元素
+        // Create canvas
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         
-        // 加载背景图片
-        const bgImg = new Image();
-        bgImg.crossOrigin = 'Anonymous';
-        bgImg.onload = function() {
-            // Set canvas dimensions to match the original image dimensions
-            canvas.width = bgImg.naturalWidth;
-            canvas.height = bgImg.naturalHeight;
+        // Create temporary image to ensure proper dimensions
+        const tempImg = new Image();
+        tempImg.onload = function() {
+            // Set canvas to original image dimensions
+            canvas.width = tempImg.naturalWidth;
+            canvas.height = tempImg.naturalHeight;
+            
+            // Draw background image
+            ctx.drawImage(tempImg, 0, 0);
             
             // Calculate scaling factors
-            const scaleX = bgImg.naturalWidth / uploadedImage.width;
-            const scaleY = bgImg.naturalHeight / uploadedImage.height;
+            const displayedWidth = uploadedImage.clientWidth;
+            const displayedHeight = uploadedImage.clientHeight;
+            const scaleX = tempImg.naturalWidth / displayedWidth;
+            const scaleY = tempImg.naturalHeight / displayedHeight;
             
-            // 绘制背景图片
-            ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
-            
-            // 加载贴纸图片
+            // Load sticker
             const stickerImg = new Image();
-            stickerImg.crossOrigin = 'Anonymous';
             stickerImg.onload = function() {
-                // 计算贴纸尺寸
-                const displayWidth = parseInt(beeperSticker.style.width) * scaleX;
-                const displayHeight = stickerImg.naturalHeight * (displayWidth / stickerImg.naturalWidth);
+                // Get sticker dimensions
+                const stickerDisplayWidth = parseInt(beeperSticker.style.width);
+                const stickerDisplayHeight = stickerImg.naturalHeight * (stickerDisplayWidth / stickerImg.naturalWidth);
                 
-                // 获取贴纸位置
+                // Get sticker position (accounting for scaling)
                 const transform = window.getComputedStyle(beeperSticker).transform;
                 const matrix = new DOMMatrix(transform);
                 const x = matrix.m41 * scaleX;
                 const y = matrix.m42 * scaleY;
                 
-                // 绘制贴纸
+                // Calculate scaled sticker dimensions
+                const scaledStickerWidth = stickerDisplayWidth * scaleX;
+                const scaledStickerHeight = stickerDisplayHeight * scaleY;
+                
+                // Draw sticker with rotation
                 ctx.save();
-                ctx.translate(x + displayWidth/2, y + displayHeight/2);
+                ctx.translate(x + scaledStickerWidth/2, y + scaledStickerHeight/2);
                 ctx.rotate(parseInt(rotationControl.value) * Math.PI / 180);
                 ctx.drawImage(
                     stickerImg, 
-                    -displayWidth/2, 
-                    -displayHeight/2, 
-                    displayWidth, 
-                    displayHeight
+                    -scaledStickerWidth/2, 
+                    -scaledStickerHeight/2, 
+                    scaledStickerWidth, 
+                    scaledStickerHeight
                 );
                 ctx.restore();
                 
-                // 下载图片
+                // Download image
                 const dataURL = canvas.toDataURL('image/png');
                 const link = document.createElement('a');
-                link.download = 'beeper-sticker-image.png';
+                link.download = 'sticker-image.png';
                 link.href = dataURL;
                 link.click();
             };
             stickerImg.src = beeperSticker.src;
         };
-        bgImg.src = uploadedImage.src;
+        tempImg.src = uploadedImage.src;
     });
 });
