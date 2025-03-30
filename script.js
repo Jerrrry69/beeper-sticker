@@ -98,17 +98,15 @@ document.addEventListener('DOMContentLoaded', function() {
         
         ctx.drawImage(uploadedImage, 0, 0, canvas.width, canvas.height);
         
-        const containerRect = imageContainer.getBoundingClientRect();
-        const stickerRect = beeperSticker.getBoundingClientRect();
-        const scaleX = canvas.width / containerRect.width;
-        const scaleY = canvas.height / containerRect.height;
-        const scale = Math.min(scaleX, scaleY);
+        // 使用原始贴纸尺寸
+        const stickerWidth = beeperSticker.naturalWidth * (beeperSticker.offsetWidth / beeperSticker.width);
+        const stickerHeight = beeperSticker.naturalHeight * (beeperSticker.offsetHeight / beeperSticker.height);
         
-        const stickerWidth = beeperSticker.offsetWidth * scale;
-        const stickerHeight = beeperSticker.offsetHeight * scale;
-        
-        const x = (stickerRect.left - containerRect.left) * scale;
-        const y = (stickerRect.top - containerRect.top) * scale;
+        // 直接从transform属性获取位置
+        const transform = window.getComputedStyle(beeperSticker).transform;
+        const matrix = new DOMMatrix(transform);
+        const x = matrix.m41;
+        const y = matrix.m42;
         
         ctx.save();
         ctx.translate(x + stickerWidth / 2, y + stickerHeight / 2);
