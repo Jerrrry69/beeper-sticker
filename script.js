@@ -9,18 +9,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const rotationValue = document.getElementById('rotationValue');
     const sizeValue = document.getElementById('sizeValue');
     const downloadBtn = document.getElementById('downloadBtn');
-    const editorArea = document.querySelector('.editor-area');
     
     let isDragging = false;
     let offsetX, offsetY;
-    
-    // 初始化旋转控制滑块，使中间为0°
+
     rotationControl.min = -180;
     rotationControl.max = 180;
     rotationControl.value = 0;
     rotationValue.textContent = '0°';
     
-    // 处理图片上传
     imageUpload.addEventListener('change', function(e) {
         const file = e.target.files[0];
         if (file) {
@@ -29,14 +26,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 uploadedImage.src = event.target.result;
                 uploadedImage.style.display = 'block';
                 beeperSticker.style.display = 'block';
-                editorArea.style.display = 'block';
                 
-                // 重置贴纸位置和大小
                 beeperSticker.dataset.x = 0;
                 beeperSticker.dataset.y = 0;
                 beeperSticker.style.width = '100px';
                 updatePosition();
-                
+
                 rotationControl.value = 0;
                 sizeControl.value = 100;
                 rotationValue.textContent = '0°';
@@ -46,145 +41,89 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // 旋转控制，左移为逆时针
     rotationControl.addEventListener('input', function() {
-        const rotation = this.value;
-        beeperSticker.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
-        rotationValue.textContent = `${rotation}°`;
+        updatePosition();
     });
     
-    // 大小控制
     sizeControl.addEventListener('input', function() {
-        const size = this.value;
-        beeperSticker.style.width = `${size}px`;
-        sizeValue.textContent = `${size}%`;
+        beeperSticker.style.width = `${this.value}px`;
+        sizeValue.textContent = `${this.value}%`;
     });
     
-    // 改进的贴纸拖拽功能
     let startX, startY, initialX = 0, initialY = 0;
     
     function startDrag(e) {
         isDragging = true;
-        const rect = beeperSticker.getBoundingClientRect();
         startX = e.clientX || e.touches[0].clientX;
         startY = e.clientY || e.touches[0].clientY;
         initialX = parseFloat(beeperSticker.dataset.x) || 0;
         initialY = parseFloat(beeperSticker.dataset.y) || 0;
-        beeperSticker.style.cursor = 'grabbing';
         e.preventDefault();
     }
     
     function doDrag(e) {
         if (!isDragging) return;
-        
         const clientX = e.clientX || e.touches[0].clientX;
         const clientY = e.clientY || e.touches[0].clientY;
-        
-        const x = initialX + (clientX - startX);
-        const y = initialY + (clientY - startY);
-        
-        beeperSticker.dataset.x = x;
-        beeperSticker.dataset.y = y;
+        beeperSticker.dataset.x = initialX + (clientX - startX);
+        beeperSticker.dataset.y = initialY + (clientY - startY);
         updatePosition();
     }
     
     function stopDrag() {
         isDragging = false;
-        beeperSticker.style.cursor = 'grab';
     }
     
     function updatePosition() {
         const rotation = rotationControl.value;
         const x = parseFloat(beeperSticker.dataset.x) || 0;
         const y = parseFloat(beeperSticker.dataset.y) || 0;
-        
-        beeperSticker.style.transform = `translate(-50%, -50%) translate(${x}px, ${y}px) rotate(${rotation}deg)`;
+        beeperSticker.style.transform = `translate(${x}px, ${y}px) rotate(${rotation}deg)`;
     }
     
-    // 添加鼠标和触摸事件
     beeperSticker.addEventListener('pointerdown', startDrag);
-    beeperSticker.addEventListener('touchstart', startDrag);
-    
     document.addEventListener('pointermove', doDrag);
-    document.addEventListener('touchmove', doDrag);
-    
     document.addEventListener('pointerup', stopDrag);
-    document.addEventListener('touchend', stopDrag);
     
-    // 旋转时也更新位置
-    rotationControl.addEventListener('input', updatePosition);
-    
-    // 下载功能
     downloadBtn.addEventListener('click', function() {
         if (!uploadedImage.src) {
             alert('请先上传图片');
             return;
         }
 
-        // 确保贴纸图片已加载
-        if (!beeperSticker.complete) {
-            alert('贴纸正在加载，请稍后再试');
-            return;
-        }
-
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
-        
-        // 设置canvas尺寸与上传图片一致
         canvas.width = uploadedImage.naturalWidth;
         canvas.height = uploadedImage.naturalHeight;
         
-        try {
-            // 先绘制背景图片
-            ctx.drawImage(uploadedImage, 0, 0, canvas.width, canvas.height);
-            
-            // 获取容器和贴纸的尺寸信息
-            const containerRect = imageContainer.getBoundingClientRect();
-            const scaleX = canvas.width / containerRect.width;
-            const scaleY = canvas.height / containerRect.height;
-            
-            // 计算贴纸在canvas中的尺寸(基于网页显示尺寸)
-            const stickerWidth = beeperSticker.offsetWidth * scaleX;
-            const stickerHeight = beeperSticker.offsetHeight * scaleY;
-            
-            // 计算贴纸中心点(基于transform的translate值)
-            const x = parseFloat(beeperSticker.dataset.x) || 0;
-            const y = parseFloat(beeperSticker.dataset.y) || 0;
-            const stickerCenterX = canvas.width/2 + x * scaleX;
-            const stickerCenterY = canvas.height/2 + y * scaleY;
-
-            // 绘制贴纸
-            ctx.save();
-            ctx.translate(stickerCenterX, stickerCenterY);
-            ctx.rotate(parseInt(rotationControl.value) * Math.PI / 180);
-            
-            ctx.drawImage(
-                beeperSticker,
-                -stickerWidth/2,
-                -stickerHeight/2,
-                stickerWidth,
-                stickerHeight
-            );
-            ctx.restore();
-            
-            // 创建下载链接
-            setTimeout(() => {
-                try {
-                    const dataURL = canvas.toDataURL('image/png');
-                    const link = document.createElement('a');
-                    link.download = 'beeper-sticker-image.png';
-                    link.href = dataURL;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                } catch (e) {
-                    console.error('生成下载链接失败:', e);
-                    alert('下载失败，请尝试使用其他图片');
-                }
-            }, 100);
-        } catch (e) {
-            console.error('绘制图片失败:', e);
-            alert('生成图片失败: ' + e.message);
-        }
+        ctx.drawImage(uploadedImage, 0, 0, canvas.width, canvas.height);
+        
+        const containerRect = imageContainer.getBoundingClientRect();
+        const stickerRect = beeperSticker.getBoundingClientRect();
+        const scaleX = canvas.width / containerRect.width;
+        const scaleY = canvas.height / containerRect.height;
+        const scale = Math.min(scaleX, scaleY);
+        
+        const stickerWidth = beeperSticker.offsetWidth * scale;
+        const stickerHeight = beeperSticker.offsetHeight * scale;
+        
+        const x = (stickerRect.left - containerRect.left) * scale;
+        const y = (stickerRect.top - containerRect.top) * scale;
+        
+        ctx.save();
+        ctx.translate(x + stickerWidth / 2, y + stickerHeight / 2);
+        ctx.rotate(parseInt(rotationControl.value) * Math.PI / 180);
+        ctx.drawImage(beeperSticker, -stickerWidth / 2, -stickerHeight / 2, stickerWidth, stickerHeight);
+        ctx.restore();
+        
+        setTimeout(() => {
+            const dataURL = canvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.download = 'beeper-sticker-image.png';
+            link.href = dataURL;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }, 100);
     });
 });
