@@ -14,6 +14,12 @@ document.addEventListener('DOMContentLoaded', function() {
     let isDragging = false;
     let offsetX, offsetY;
     
+    // 初始化旋转控制滑块，使中间为0°
+    rotationControl.min = -180;
+    rotationControl.max = 180;
+    rotationControl.value = 0;
+    rotationValue.textContent = '0°';
+    
     // 处理图片上传
     imageUpload.addEventListener('change', function(e) {
         const file = e.target.files[0];
@@ -26,11 +32,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 editorArea.style.display = 'block';
                 
                 // 重置贴纸位置和大小
-                beeperSticker.style.transform = 'rotate(0deg)';
+                beeperSticker.style.transform = 'translate(-50%, -50%) rotate(0deg)';
                 beeperSticker.style.width = '100px';
                 beeperSticker.style.left = '50%';
                 beeperSticker.style.top = '50%';
-                beeperSticker.style.transform = 'translate(-50%, -50%)';
                 
                 rotationControl.value = 0;
                 sizeControl.value = 100;
@@ -41,10 +46,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // 旋转控制
+    // 旋转控制，左移为逆时针
     rotationControl.addEventListener('input', function() {
         const rotation = this.value;
-        beeperSticker.style.transform = `rotate(${rotation}deg)`;
+        beeperSticker.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
         rotationValue.textContent = `${rotation}°`;
     });
     
@@ -55,33 +60,32 @@ document.addEventListener('DOMContentLoaded', function() {
         sizeValue.textContent = `${size}%`;
     });
     
-    // 拖拽功能
-    beeperSticker.addEventListener('mousedown', function(e) {
+    // 贴纸拖拽（按住即可拖动）
+    beeperSticker.addEventListener('pointerdown', function(e) {
         isDragging = true;
         offsetX = e.clientX - beeperSticker.getBoundingClientRect().left;
         offsetY = e.clientY - beeperSticker.getBoundingClientRect().top;
         beeperSticker.style.cursor = 'grabbing';
     });
     
-    document.addEventListener('mousemove', function(e) {
+    document.addEventListener('pointermove', function(e) {
         if (!isDragging) return;
         
         const containerRect = imageContainer.getBoundingClientRect();
         let x = e.clientX - containerRect.left - offsetX;
         let y = e.clientY - containerRect.top - offsetY;
         
-        // 限制在容器内
+        // 限制贴纸在容器内
         x = Math.max(0, Math.min(x, containerRect.width - beeperSticker.offsetWidth));
         y = Math.max(0, Math.min(y, containerRect.height - beeperSticker.offsetHeight));
         
         beeperSticker.style.left = `${x}px`;
         beeperSticker.style.top = `${y}px`;
-        beeperSticker.style.transform = `rotate(${rotationControl.value}deg)`;
     });
     
-    document.addEventListener('mouseup', function() {
+    document.addEventListener('pointerup', function() {
         isDragging = false;
-        beeperSticker.style.cursor = 'move';
+        beeperSticker.style.cursor = 'grab';
     });
     
     // 下载功能
@@ -89,14 +93,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         
-        // 设置canvas大小与图片相同
         canvas.width = uploadedImage.naturalWidth;
         canvas.height = uploadedImage.naturalHeight;
         
-        // 绘制背景图片
         ctx.drawImage(uploadedImage, 0, 0, canvas.width, canvas.height);
         
-        // 计算贴纸在canvas上的位置和大小
         const stickerRect = beeperSticker.getBoundingClientRect();
         const containerRect = imageContainer.getBoundingClientRect();
         
@@ -109,16 +110,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const stickerX = (stickerRect.left - containerRect.left) * scaleX;
         const stickerY = (stickerRect.top - containerRect.top) * scaleY;
         
-        // 保存当前状态
         ctx.save();
-        
-        // 移动到贴纸中心
         ctx.translate(stickerX + stickerWidth / 2, stickerY + stickerHeight / 2);
-        
-        // 旋转
         ctx.rotate(parseInt(rotationControl.value) * Math.PI / 180);
         
-        // 绘制贴纸
         ctx.drawImage(
             beeperSticker, 
             -stickerWidth / 2, 
@@ -127,10 +122,8 @@ document.addEventListener('DOMContentLoaded', function() {
             stickerHeight
         );
         
-        // 恢复状态
         ctx.restore();
         
-        // 创建下载链接
         const link = document.createElement('a');
         link.download = 'beeper-sticker-image.png';
         link.href = canvas.toDataURL('image/png');
